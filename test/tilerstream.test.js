@@ -22,9 +22,9 @@ tape('TILE should make 16 tile objects', function(t) {
         t.equals(count, 16, 'correct number of tiles')
       });
       fs.unlink(file, function(err) {
-        if (err) console.log(err);
+        if (err) t.ifError(err);
         console.log('deleted old fixture');
-      });;
+      });
       t.end();
     });
 });
