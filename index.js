@@ -75,7 +75,7 @@ module.exports = function() {
       tileHolder.tiles[tileQuad] = new tiler.Tile();
       tileHolder.tiles[tileQuad].initialize(data, tileQuad, tileHolder.featureCount, function(err, tileObj) {
         if (err) throw err;
-        layTileStream.push(makeTile(tileObj));
+        layTileStream.push(makeTile(tileObj)+'\n');
       });
     }
     callback();
@@ -102,7 +102,7 @@ module.exports = function() {
         buffer: buffer.toString('base64')
       };
 
-      cerealStream.push(JSON.stringify(obj));
+      cerealStream.push(JSON.stringify(obj)+'\n');
 
       callback();
     });
