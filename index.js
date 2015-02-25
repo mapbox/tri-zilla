@@ -6,6 +6,7 @@ var Transform = require('stream').Transform;
 var Aggregator = require('./lib/aggregator');
 var tiler = require('./lib/tiler');
 var inflator = require('./lib/inflator');
+var Compress = require('./lib/compressor');
 
 mapnik.register_datasource(path.join(mapnik.settings.paths.input_plugins,'geojson.input'));
 
@@ -125,11 +126,65 @@ module.exports = function() {
     callback();
   };
 
+  util.inherits(CompressStream, Transform);
+  function CompressStream(levels) {
+    Transform.call(this, levels);
+    this.levels = levels;
+    this.compressionHolder = new Compress.StreamCompressor(levels);
+  }
+
+  CompressStream.prototype._transform = function(chunk, enc, callback) {
+    var compStream = this;
+    var data;
+    try {
+      data = JSON.parse(chunk);
+    } catch(err) { callback(err); }
+    levels = compStream.levels
+    compressionHolder = compStream.compressionHolder;
+
+    var qt = data.qt.slice(0, data.qt.length - levels * 2);
+
+    if (compressionHolder[qt]) {
+      compressionHolder[qt].aggregate(data);
+    } else {
+      compressionHolder[qt] = new Compress.Compressor();
+      compressionHolder[qt].initialize(data, levels, 2, function (err, out, dQt) {
+        if (err) throw err;
+        compStream.push(JSON.stringify(out));
+        compressionHolder[dQt] = true;
+      });
+    }
+    callback();
+  };
+
+  util.inherits(DecompressStream, Transform);
+  function DecompressStream(levels) {
+    Transform.call(this, levels);
+  }
+
+  DecompressStream.prototype._transform = function(chunk, enc, callback) {
+    var decompStream = this;
+    var data;
+    try {
+      data = JSON.parse(chunk);
+    } catch(err) { callback(err); }
+    var dc = new Compress.Decompressor()
+    dc.decompress(data, function(err, outData) {
+      for (var i = 0; i < outData.length; i++) {
+        decompStream.push(JSON.stringify(outData[i]));
+      }
+    });
+
+    callback();
+  };
+
   return {
     inflate: function(value) { return new InflateStream(value); },
     tile: function(delta) { return new LayTileStream(delta); },
     serialize: function(x) { return new CerealStream(x); },
-    clean: function(options) { return new CleanStream(options); }
+    clean: function(options) { return new CleanStream(options); },
+    compress: function(levels) { return new CompressStream(levels); },
+    decompress: function(levels) {return new DecompressStream(levels)}
   };
 };
 
