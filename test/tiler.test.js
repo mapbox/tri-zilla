@@ -15,8 +15,12 @@ var tri_tiler = new trizilla_tiler.Tile()
 function tileCallback(err, tileData) {
   tape('should match the tiled feature', function(t) {
     t.ok(tri_tiler, 'is inflating');
-    var expected = fs.readFileSync('./test/fixtures/laytile-expected').toString();
-    t.equal(JSON.stringify(tileData), expected);
+    var expected = JSON.parse(fs.readFileSync('./test/fixtures/laytile-expected'));
+    t.deepEqual(
+      tileData,
+      expected
+    );
+
     t.end();
   })
 }
@@ -28,6 +32,6 @@ parser.on('root', function (GeoJSON) {
     firstTime = false;
     tri_tiler.initialize(GeoJSON, '021333303', 128, tileCallback)
   } else {
-    tri_tiler.addFeature(GeoJSON)
+    tri_tiler.addFeature(GeoJSON);
   }
 });
